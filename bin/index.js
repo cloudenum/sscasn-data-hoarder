@@ -88,6 +88,13 @@ do {
         formasi = (await SscasnApi.getDetailFormasi(formasi.formasi_id)).data?.data || formasi;
       }
 
+      if (formasi.gaji_min) {
+        formasi.gaji_min = parseInt(formasi.gaji_min);
+      }
+      if (formasi.gaji_max) {
+        formasi.gaji_max = parseInt(formasi.gaji_max);
+      }
+
       if (existingData) {
         dataForUpdate.push(formasi);
       } else {
