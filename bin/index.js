@@ -2,7 +2,7 @@
 
 'use strict';
 
-import { program } from 'commander';
+import { program, Option } from 'commander';
 import chalk from 'chalk';
 import { password as passwordInput } from '@inquirer/prompts';
 import SscasnApi from '../lib/services/sscasn-api.js';
@@ -15,7 +15,10 @@ program
   .option('--instansi-id <id>', 'ID Instansi')
   .option('-u, --username <username>', 'MongoDB Username, password will be prompted')
   .option('-d, --database <name>', 'Database Name', 'cpns')
-  .option('--with-details', 'Get details for each Formasi', false);
+  .option('--with-details', 'Get details for each Formasi', false)
+  .addOption(new Option('--min-interval <ms>', 'Min random interval in ms').conflicts('disable-interval').default(1000))
+  .addOption(new Option('--max-interval <ms>', 'Max random interval in ms').conflicts('disable-interval').default(5000))
+  .addOption(new Option('--disable-interval', 'Disable interval. WARNING! Your IP might get blocked'));
 
 program.parse(process.argv);
 
@@ -41,12 +44,19 @@ let totalData = 0;
 let itemPerPage = 10;
 let iteration = 0;
 let maxIteration = 0;
-let interval = Math.trunc(Math.random() * 2000) + 1000;
+let interval = 0;
 // Fetch all data and save it to mongodb
 // if data already exists update it
 const dataForInsert = [];
 const dataForUpdate = [];
+if (cliOpts.disableInterval) {
+  cliOpts.maxInterval = 0;
+  cliOpts.minInterval = 0;
+}
+
 do {
+  interval = Math.trunc(Math.random() * (cliOpts.maxInterval - cliOpts.minInterval)) + cliOpts.minInterval;
+
   cout.replaceCurrentLine(chalk.green(`Fetch SSCASN API... ${iteration + 1}/${maxIteration + 1} | interval: ${interval}ms`));
   let response = await SscasnApi.getAllFormasi(cliOpts.kodePendidikan, cliOpts.instansiId, (iteration * itemPerPage));
   let responseJson = response.data;
@@ -80,7 +90,6 @@ do {
   }
 
   await sleep(interval);
-  interval = Math.trunc(Math.random() * 4000) + 1000;
 } while (iteration++ < maxIteration);
 
 cout.writeLine();
