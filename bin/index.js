@@ -49,11 +49,21 @@ let minInterval = parseInt(cliOpts.minInterval);
 let maxInterval = parseInt(cliOpts.maxInterval);
 // Fetch all data and save it to mongodb
 // if data already exists update it
-const dataForInsert = [];
-const dataForUpdate = [];
+let dataForInsert = [];
+let dataForUpdate = [];
 if (cliOpts.disableInterval) {
   minInterval = 0;
   maxInterval = 0;
+}
+
+const saveData = async () => {
+  if (dataForInsert.length > 0) {
+    await collection.insertMany(dataForInsert);
+  }
+
+  dataForUpdate.forEach(async formasi => {
+    await collection.replaceOne({ formasi_id: formasi.formasi_id }, formasi);
+  })
 }
 
 do {
@@ -83,12 +93,21 @@ do {
       } else {
         dataForInsert.push(formasi);
       }
+
+      await sleep(250);
     });
 
     if (!totalData) {
       totalData = responseJson.data.meta.total;
       maxIteration = Math.ceil(totalData / itemPerPage) - 1;
     }
+  }
+
+  if (iteration && iteration % 10 === 0) {
+    cout.write(' | Saving ...');
+    await saveData();
+    dataForInsert = [];
+    dataForUpdate = [];
   }
 
   await sleep(interval);
@@ -98,10 +117,7 @@ cout.writeLine();
 cout.writeLine(chalk.green(`Fetched ${totalData} data from SSCASN API`));
 
 cout.writeLine(chalk.green(`Saving data to MongoDB...`));
-await collection.insertMany(dataForInsert);
-dataForUpdate.forEach(async formasi => {
-  await collection.replaceOne({ formasi_id: formasi.formasi_id }, formasi);
-})
+await saveData();
 cout.writeLine(chalk.green(`Data saved to MongoDB`));
 
 client.close().catch(console.dir);
