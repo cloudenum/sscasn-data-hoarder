@@ -45,17 +45,19 @@ let itemPerPage = 10;
 let iteration = 0;
 let maxIteration = 0;
 let interval = 0;
+let minInterval = parseInt(cliOpts.minInterval);
+let maxInterval = parseInt(cliOpts.maxInterval);
 // Fetch all data and save it to mongodb
 // if data already exists update it
 const dataForInsert = [];
 const dataForUpdate = [];
 if (cliOpts.disableInterval) {
-  cliOpts.maxInterval = 0;
-  cliOpts.minInterval = 0;
+  minInterval = 0;
+  maxInterval = 0;
 }
 
 do {
-  interval = Math.trunc(Math.random() * (cliOpts.maxInterval - cliOpts.minInterval)) + cliOpts.minInterval;
+  interval = Math.trunc(Math.random() * (maxInterval - minInterval)) + minInterval;
 
   cout.replaceCurrentLine(chalk.green(`Fetch SSCASN API... ${iteration + 1}/${maxIteration + 1} | interval: ${interval}ms`));
   let response = await SscasnApi.getAllFormasi(cliOpts.kodePendidikan, cliOpts.instansiId, (iteration * itemPerPage));
