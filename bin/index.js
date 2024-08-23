@@ -12,8 +12,10 @@ import { sleep } from '../lib/utils/sleep.js';
 
 program
   .requiredOption('--kode-pendidikan <kode>', 'Kode/ID Pendidikan/Jurusan')
+  .option('--instansi-id <id>', 'ID Instansi')
   .option('-u, --username <username>', 'MongoDB Username, password will be prompted')
-  .option('-d, --database <name>', 'Database Name', 'cpns');
+  .option('-d, --database <name>', 'Database Name', 'cpns')
+  .option('--with-details', 'Get details for each Formasi', false);
 
 program.parse(process.argv);
 
@@ -39,22 +41,31 @@ let totalData = 0;
 let itemPerPage = 10;
 let iteration = 0;
 let maxIteration = 0;
-let interval = Math.trunc(Math.random() * 4000) + 1000;
+let interval = Math.trunc(Math.random() * 2000) + 1000;
 // Fetch all data and save it to mongodb
 // if data already exists update it
 const dataForInsert = [];
 const dataForUpdate = [];
 do {
-  cout.replaceCurrentLine(chalk.green(`Fetching data from SSCASN API... ${iteration + 1}/${maxIteration + 1} next in: ${interval}`));
-  let response = await SscasnApi.getAllFormasi(cliOpts.kodePendidikan, null, (iteration * itemPerPage));
+  cout.replaceCurrentLine(chalk.green(`Fetch SSCASN API... ${iteration + 1}/${maxIteration + 1} | interval: ${interval}ms`));
+  let response = await SscasnApi.getAllFormasi(cliOpts.kodePendidikan, cliOpts.instansiId, (iteration * itemPerPage));
   let responseJson = response.data;
 
   if (responseJson?.data?.data) {
+    if (cliOpts.withDetails) {
+      cout.write(chalk.green(" | Fetching details ..."))
+    }
+
     responseJson.data.data.forEach(async formasi => {
       const existingData = await collection.findOne(
         { formasi_id: formasi.formasi_id },
         { projection: { formasi_id: 1 } }
       );
+
+      if (cliOpts.withDetails) {
+        formasi = (await SscasnApi.getDetailFormasi(formasi.formasi_id)).data?.data || formasi;
+      }
+
       if (existingData) {
         dataForUpdate.push(formasi);
       } else {
